@@ -26,6 +26,8 @@ Owner: a beginner on Windows who uses the app personally. The repo is **public**
 │  │               retry, JSON parsing, copy, status banner. Exposes window.PA
 │  ├─ claude.js    Claude page: fields, example, compile, system prompt
 │  └─ gemini.js    Gemini page: fields, example, compile, system prompt
+├─ tests/
+│  └─ parse_test.js  Node unit test for shared response parsing & validation
 ├─ config.example.js   committed template (placeholders only)
 ├─ config.js           git-ignored, holds the owner's real key. Never read it, print it or commit it
 ├─ .gitignore
@@ -81,7 +83,8 @@ If codegraph is not available, fall back to reading the files. This repo is smal
 Run these and report the results in your reply:
 
 1. `node --check js/common.js js/claude.js js/gemini.js`. If Node is not installed, skip it and say so.
-2. Secret scan on tracked files and staged changes. Both must print nothing:
+2. `node tests/parse_test.js` (all cases must pass).
+3. Secret scan on tracked files and staged changes. Both must print nothing:
    ```powershell
    git grep -nE "AIza[0-9A-Za-z_-]{35}|sk-or-v1-[0-9a-f]{20,}"
    git diff --cached | Select-String -Pattern "AIza[0-9A-Za-z_-]{35}|sk-or-v1-[0-9a-f]{20,}"
@@ -100,6 +103,8 @@ Commit automatically when a task is finished **and** section 6 passes. Do not as
 - Stage files explicitly by path (`git add js/common.js README.md`). Avoid `git add .` / `-A` so stray files never slip in. Check `git status` and `git diff --cached` before committing.
 - **Never** `git push`, `git push --force`, `git commit --amend` on pushed commits, `git rebase` on pushed history, or `git reset --hard`. The owner pushes manually.
 - Do not change git config (user.name, user.email, remotes).
+- Run each Git command as a separate command. Do not combine them with `;`, `&&`, `Write-Host`, or `$LASTEXITCODE` on a single line.
+- To search for text in the repo, use `git grep --no-index --exclude-standard ...` (run it in the sandbox and make sure to respect the .gitignore file).
 
 ### Conventional Commits
 
