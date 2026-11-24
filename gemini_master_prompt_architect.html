@@ -79,6 +79,19 @@
             background-color: #242527;
             border-color: #4c4f52;
         }
+        button:focus-visible,
+        summary:focus-visible,
+        input[type="checkbox"]:focus-visible {
+            outline: 2px solid #4285f4;
+            outline-offset: 2px;
+        }
+        summary:focus-visible {
+            outline-offset: -2px;
+        }
+        .section-card:has(textarea:focus-visible) {
+            border-color: #4285f4;
+            box-shadow: inset 0 0 0 1px #4285f4;
+        }
         @keyframes pulse-subtle {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.45; }
@@ -137,7 +150,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                         <label for="pa-provider" class="block text-xs text-gemini-muted mb-1">Provider</label>
-                        <select id="pa-provider" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text focus:outline-none focus:border-gemini-blue">
+                        <select id="pa-provider" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text focus:outline-none focus:border-gemini-blue focus-visible:ring-2 focus-visible:ring-gemini-blue">
                             <option value="gemini">Gemini</option>
                             <option value="openrouter">OpenRouter</option>
                             <option value="custom">OpenAI-compatible (custom)</option>
@@ -145,16 +158,16 @@
                     </div>
                     <div>
                         <label for="pa-api-key" class="block text-xs text-gemini-muted mb-1">API key</label>
-                        <input id="pa-api-key" type="password" autocomplete="off" placeholder="Paste API key (or set in config.js)" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue">
+                        <input id="pa-api-key" type="password" autocomplete="off" placeholder="Paste API key (or set in config.js)" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue focus-visible:ring-2 focus-visible:ring-gemini-blue">
                     </div>
                     <div>
                         <label for="pa-model" class="block text-xs text-gemini-muted mb-1">Model</label>
-                        <input id="pa-model" type="text" placeholder="gemini-3-flash-preview" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue">
+                        <input id="pa-model" type="text" placeholder="gemini-3-flash-preview" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue focus-visible:ring-2 focus-visible:ring-gemini-blue">
                     </div>
                 </div>
                 <div id="pa-base-url-wrap" class="hidden">
                     <label for="pa-base-url" class="block text-xs text-gemini-muted mb-1">Base URL</label>
-                    <input id="pa-base-url" type="url" placeholder="http://localhost:20128/v1" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue">
+                    <input id="pa-base-url" type="url" placeholder="http://localhost:20128/v1" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue focus-visible:ring-2 focus-visible:ring-gemini-blue">
                 </div>
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <label class="inline-flex items-center gap-2 text-xs text-gemini-muted cursor-pointer select-none">
@@ -183,7 +196,7 @@
                     <textarea 
                         id="simplePromptInput" 
                         rows="3" 
-                        class="w-full bg-gemini-bg border border-gemini-border rounded-xl p-4 text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue focus:ring-1 focus:ring-gemini-blue transition resize-none text-sm sm:text-base"
+                        class="w-full bg-gemini-bg border border-gemini-border rounded-xl p-4 text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue focus:ring-1 focus:ring-gemini-blue focus-visible:ring-2 transition resize-none text-sm sm:text-base"
                         placeholder="e.g., Build a 90-day launch plan for my AI task manager for founders with a 2-person team and lean budget..."
                     ></textarea>
                 </div>
@@ -216,12 +229,12 @@
         </section>
 
         <!-- Error / Status Toast Banner -->
-        <div id="statusBanner" class="hidden mb-6 p-4 rounded-xl border text-sm flex items-center justify-between gap-3">
+        <div id="statusBanner" role="status" aria-live="polite" aria-atomic="true" class="hidden mb-6 p-4 rounded-xl border text-sm flex items-center justify-between gap-3">
             <div class="flex items-center gap-2.5">
                 <i id="statusIcon" data-lucide="info" class="w-4 h-4 shrink-0"></i>
                 <span id="statusMessage"></span>
             </div>
-            <button onclick="hideStatus()" class="text-current opacity-70 hover:opacity-100 cursor-pointer">
+            <button type="button" aria-label="Dismiss status message" onclick="hideStatus()" class="text-current opacity-70 hover:opacity-100 cursor-pointer">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
         </div>
@@ -256,9 +269,9 @@
                             <div class="w-1 rounded-full bg-gemini-blue shrink-0"></div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2 mb-1.5">
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-blue">
+                                    <label for="field-role" class="text-xs font-semibold uppercase tracking-wider text-gemini-blue">
                                         Role <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;role&gt;</span>
-                                    </span>
+                                    </label>
                                     <span class="text-[11px] text-gemini-muted">Who Gemini is. Short, specific.</span>
                                 </div>
                                 <textarea 
@@ -278,9 +291,9 @@
                             <div class="w-1 rounded-full bg-gemini-purple shrink-0"></div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2 mb-1.5">
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-purple">
+                                    <label for="field-constraints" class="text-xs font-semibold uppercase tracking-wider text-gemini-purple">
                                         Constraints <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;constraints&gt;</span>
-                                    </span>
+                                    </label>
                                     <span class="text-[11px] text-gemini-muted">Do's & don'ts, tone, how to handle gaps.</span>
                                 </div>
                                 <textarea 
@@ -300,9 +313,9 @@
                             <div class="w-1 rounded-full bg-gemini-pink shrink-0"></div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2 mb-1.5">
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-pink">
+                                    <label for="field-output" class="text-xs font-semibold uppercase tracking-wider text-gemini-pink">
                                         Output Format <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;output_format&gt;</span>
-                                    </span>
+                                    </label>
                                     <span class="text-[11px] text-gemini-muted">Exact shape of the answer.</span>
                                 </div>
                                 <textarea 
@@ -331,9 +344,9 @@
                             <div class="w-1 rounded-full bg-gemini-green shrink-0"></div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2 mb-1.5">
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-green">
+                                    <label for="field-context" class="text-xs font-semibold uppercase tracking-wider text-gemini-green">
                                         Context <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;context&gt;</span>
-                                    </span>
+                                    </label>
                                     <span class="text-[11px] text-gemini-muted">Long material goes here, before the question.</span>
                                 </div>
                                 <textarea 
@@ -362,9 +375,9 @@
                             <div class="w-1 rounded-full bg-gemini-yellow shrink-0"></div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2 mb-1.5">
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-yellow">
+                                    <label for="field-task" class="text-xs font-semibold uppercase tracking-wider text-gemini-yellow">
                                         Task <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;task&gt;</span>
-                                    </span>
+                                    </label>
                                     <span class="text-[11px] text-gemini-muted">One clear request.</span>
                                 </div>
                                 <textarea 
@@ -384,9 +397,9 @@
                             <div class="w-1 rounded-full bg-gemini-cyan shrink-0"></div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between gap-2 mb-1.5">
-                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-cyan">
+                                    <label for="field-final" class="text-xs font-semibold uppercase tracking-wider text-gemini-cyan">
                                         Final Instruction <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;final_instruction&gt;</span>
-                                    </span>
+                                    </label>
                                     <span class="text-[11px] text-gemini-muted">Anchor + stop condition, at the very end.</span>
                                 </div>
                                 <textarea 
@@ -413,10 +426,10 @@
                     <h2 class="font-display text-lg sm:text-xl font-semibold text-gemini-text">Compiled Gemini Prompt</h2>
                     <!-- Consistent Format Switcher: XML Tags OR Markdown Headings (Never Mixed) -->
                     <div class="flex items-center gap-1 bg-gemini-surface border border-gemini-border rounded-lg p-1" title="Gemini best practice: use one consistent delimiter format">
-                        <button id="formatXmlBtn" onclick="setFormatMode('xml')" class="text-xs px-2.5 py-1 rounded-md bg-gemini-surfaceHover text-gemini-text font-medium transition cursor-pointer">
+                        <button type="button" id="formatXmlBtn" aria-pressed="true" onclick="setFormatMode('xml')" class="text-xs px-2.5 py-1 rounded-md bg-gemini-surfaceHover text-gemini-text font-medium transition cursor-pointer">
                             XML Tags
                         </button>
-                        <button id="formatMdBtn" onclick="setFormatMode('markdown')" class="text-xs px-2.5 py-1 rounded-md text-gemini-muted hover:text-gemini-text transition cursor-pointer">
+                        <button type="button" id="formatMdBtn" aria-pressed="false" onclick="setFormatMode('markdown')" class="text-xs px-2.5 py-1 rounded-md text-gemini-muted hover:text-gemini-text transition cursor-pointer">
                             Markdown
                         </button>
                     </div>
@@ -471,7 +484,7 @@
     </main>
 
     <!-- Hidden textarea fallback for reliable clipboard copy -->
-    <textarea id="clipboardFallback" class="sr-only" aria-hidden="true"></textarea>
+    <textarea id="clipboardFallback" class="sr-only" aria-hidden="true" tabindex="-1"></textarea>
 
     <script src="config.js"></script>
     <script src="js/common.js"></script>

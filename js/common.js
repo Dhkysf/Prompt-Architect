@@ -197,11 +197,20 @@
         }
     }
 
+    let statusFrameId = null;
+
     function showStatus(message, type = 'info', themePrefix = 'claude') {
         const banner = document.getElementById('statusBanner');
         const msgEl = document.getElementById('statusMessage');
         const iconEl = document.getElementById('statusIcon');
         if (!banner || !msgEl || !iconEl) return;
+
+        if (statusFrameId !== null) {
+            cancelAnimationFrame(statusFrameId);
+            statusFrameId = null;
+        }
+
+        msgEl.textContent = '';
 
         banner.classList.remove(
             'hidden',
@@ -222,11 +231,18 @@
             iconEl.setAttribute('data-lucide', 'info');
         }
 
-        msgEl.textContent = message;
         initIcons();
+        statusFrameId = requestAnimationFrame(() => {
+            statusFrameId = null;
+            msgEl.textContent = message;
+        });
     }
 
     function hideStatus() {
+        if (statusFrameId !== null) {
+            cancelAnimationFrame(statusFrameId);
+            statusFrameId = null;
+        }
         const banner = document.getElementById('statusBanner');
         if (banner) banner.classList.add('hidden');
     }
@@ -245,6 +261,7 @@
         if (!copied) {
             const fallback = document.getElementById('clipboardFallback');
             if (fallback) {
+                const prevFocus = document.activeElement;
                 fallback.value = text;
                 fallback.select();
                 fallback.setSelectionRange(0, 99999);
@@ -252,6 +269,10 @@
                     copied = document.execCommand('copy');
                 } catch (_) {
                     copied = false;
+                } finally {
+                    if (prevFocus && typeof prevFocus.focus === 'function' && prevFocus !== fallback) {
+                        prevFocus.focus({ preventScroll: true });
+                    }
                 }
             }
         }

@@ -83,6 +83,8 @@ function setFormatMode(mode) {
         xmlBtn.className = "text-xs px-2.5 py-1 rounded-md bg-claude-surfaceHover text-claude-text font-medium transition";
         cleanBtn.className = "text-xs px-2.5 py-1 rounded-md text-claude-muted hover:text-claude-text transition";
     }
+    cleanBtn.setAttribute('aria-pressed', String(mode === 'clean'));
+    xmlBtn.setAttribute('aria-pressed', String(mode !== 'clean'));
     updateCombinedPrompt();
 }
 

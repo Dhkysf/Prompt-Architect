@@ -68,6 +68,19 @@
         .section-card:focus-within {
             background-color: #2c2b26;
         }
+        button:focus-visible,
+        summary:focus-visible,
+        input[type="checkbox"]:focus-visible {
+            outline: 2px solid #d97757;
+            outline-offset: 2px;
+        }
+        summary:focus-visible {
+            outline-offset: -2px;
+        }
+        .section-card:has(textarea:focus-visible) {
+            border-color: #d97757;
+            box-shadow: inset 0 0 0 1px #d97757;
+        }
         @keyframes pulse-subtle {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -126,7 +139,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                         <label for="pa-provider" class="block text-xs text-claude-muted mb-1">Provider</label>
-                        <select id="pa-provider" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text focus:outline-none focus:border-claude-accent">
+                        <select id="pa-provider" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text focus:outline-none focus:border-claude-accent focus-visible:ring-2 focus-visible:ring-claude-accent">
                             <option value="gemini">Gemini</option>
                             <option value="openrouter">OpenRouter</option>
                             <option value="custom">OpenAI-compatible (custom)</option>
@@ -134,16 +147,16 @@
                     </div>
                     <div>
                         <label for="pa-api-key" class="block text-xs text-claude-muted mb-1">API key</label>
-                        <input id="pa-api-key" type="password" autocomplete="off" placeholder="Paste API key (or set in config.js)" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent">
+                        <input id="pa-api-key" type="password" autocomplete="off" placeholder="Paste API key (or set in config.js)" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent focus-visible:ring-2 focus-visible:ring-claude-accent">
                     </div>
                     <div>
                         <label for="pa-model" class="block text-xs text-claude-muted mb-1">Model</label>
-                        <input id="pa-model" type="text" placeholder="gemini-3-flash-preview" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent">
+                        <input id="pa-model" type="text" placeholder="gemini-3-flash-preview" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent focus-visible:ring-2 focus-visible:ring-claude-accent">
                     </div>
                 </div>
                 <div id="pa-base-url-wrap" class="hidden">
                     <label for="pa-base-url" class="block text-xs text-claude-muted mb-1">Base URL</label>
-                    <input id="pa-base-url" type="url" placeholder="http://localhost:20128/v1" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent">
+                    <input id="pa-base-url" type="url" placeholder="http://localhost:20128/v1" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent focus-visible:ring-2 focus-visible:ring-claude-accent">
                 </div>
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <label class="inline-flex items-center gap-2 text-xs text-claude-muted cursor-pointer select-none">
@@ -172,7 +185,7 @@
                     <textarea 
                         id="simplePromptInput" 
                         rows="3" 
-                        class="w-full bg-claude-bg border border-claude-border rounded-xl p-4 text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent focus:ring-1 focus:ring-claude-accent transition resize-none text-sm sm:text-base"
+                        class="w-full bg-claude-bg border border-claude-border rounded-xl p-4 text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent focus:ring-1 focus:ring-claude-accent focus-visible:ring-2 transition resize-none text-sm sm:text-base"
                         placeholder="e.g., Create a 90-day go-to-market launch plan for my new AI task manager startup with a small team and tight budget..."
                     ></textarea>
                 </div>
@@ -205,12 +218,12 @@
         </section>
 
         <!-- Error / Status Toast Banner -->
-        <div id="statusBanner" class="hidden mb-6 p-4 rounded-xl border text-sm flex items-center justify-between gap-3">
+        <div id="statusBanner" role="status" aria-live="polite" aria-atomic="true" class="hidden mb-6 p-4 rounded-xl border text-sm flex items-center justify-between gap-3">
             <div class="flex items-center gap-2.5">
                 <i id="statusIcon" data-lucide="info" class="w-4 h-4 shrink-0"></i>
                 <span id="statusMessage"></span>
             </div>
-            <button onclick="hideStatus()" class="text-current opacity-70 hover:opacity-100">
+            <button type="button" aria-label="Dismiss status message" onclick="hideStatus()" class="text-current opacity-70 hover:opacity-100">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
         </div>
@@ -237,9 +250,9 @@
                         <div class="w-1 rounded-full bg-claude-role shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2 mb-2">
-                                <span class="text-xs font-semibold uppercase tracking-wider text-claude-role flex items-center gap-1.5">
+                                <label for="field-role" class="text-xs font-semibold uppercase tracking-wider text-claude-role flex items-center gap-1.5">
                                     1. Role
-                                </span>
+                                </label>
                                 <span class="text-[11px] text-claude-muted hidden sm:inline">Persona, expertise & guiding priority</span>
                             </div>
                             <textarea 
@@ -259,9 +272,9 @@
                         <div class="w-1 rounded-full bg-claude-task shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2 mb-2">
-                                <span class="text-xs font-semibold uppercase tracking-wider text-claude-task flex items-center gap-1.5">
+                                <label for="field-task" class="text-xs font-semibold uppercase tracking-wider text-claude-task flex items-center gap-1.5">
                                     2. Task
-                                </span>
+                                </label>
                                 <span class="text-[11px] text-claude-muted hidden sm:inline">Core objective & final deliverable</span>
                             </div>
                             <textarea 
@@ -281,9 +294,9 @@
                         <div class="w-1 rounded-full bg-claude-context shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2 mb-2">
-                                <span class="text-xs font-semibold uppercase tracking-wider text-claude-context flex items-center gap-1.5">
+                                <label for="field-context" class="text-xs font-semibold uppercase tracking-wider text-claude-context flex items-center gap-1.5">
                                     3. Context
-                                </span>
+                                </label>
                                 <span class="text-[11px] text-claude-muted hidden sm:inline">Constraints, resources, facts & risks</span>
                             </div>
                             <textarea 
@@ -303,9 +316,9 @@
                         <div class="w-1 rounded-full bg-claude-reasoning shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2 mb-2">
-                                <span class="text-xs font-semibold uppercase tracking-wider text-claude-reasoning flex items-center gap-1.5">
+                                <label for="field-reasoning" class="text-xs font-semibold uppercase tracking-wider text-claude-reasoning flex items-center gap-1.5">
                                     4. Reasoning
-                                </span>
+                                </label>
                                 <span class="text-[11px] text-claude-muted hidden sm:inline">Strategic approach & thinking standard</span>
                             </div>
                             <textarea 
@@ -325,9 +338,9 @@
                         <div class="w-1 rounded-full bg-claude-stop shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2 mb-2">
-                                <span class="text-xs font-semibold uppercase tracking-wider text-claude-stop flex items-center gap-1.5">
+                                <label for="field-stop" class="text-xs font-semibold uppercase tracking-wider text-claude-stop flex items-center gap-1.5">
                                     5. Stop Conditions
-                                </span>
+                                </label>
                                 <span class="text-[11px] text-claude-muted hidden sm:inline">Strict completion criteria & guardrails</span>
                             </div>
                             <textarea 
@@ -347,9 +360,9 @@
                         <div class="w-1 rounded-full bg-claude-output shrink-0"></div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between gap-2 mb-2">
-                                <span class="text-xs font-semibold uppercase tracking-wider text-claude-output flex items-center gap-1.5">
+                                <label for="field-output" class="text-xs font-semibold uppercase tracking-wider text-claude-output flex items-center gap-1.5">
                                     6. Output
-                                </span>
+                                </label>
                                 <span class="text-[11px] text-claude-muted hidden sm:inline">Exact structural schema & formatting</span>
                             </div>
                             <textarea 
@@ -369,10 +382,10 @@
                 <div class="flex items-center justify-between px-1">
                     <h2 class="font-serif text-lg sm:text-xl text-claude-text">Compiled Master Prompt</h2>
                     <div class="flex items-center gap-1.5 bg-claude-surface border border-claude-border rounded-lg p-1">
-                        <button id="formatCleanBtn" onclick="setFormatMode('clean')" class="text-xs px-2.5 py-1 rounded-md bg-claude-surfaceHover text-claude-text font-medium transition">
+                        <button type="button" id="formatCleanBtn" aria-pressed="true" onclick="setFormatMode('clean')" class="text-xs px-2.5 py-1 rounded-md bg-claude-surfaceHover text-claude-text font-medium transition">
                             Clean Text
                         </button>
-                        <button id="formatXmlBtn" onclick="setFormatMode('xml')" class="text-xs px-2.5 py-1 rounded-md text-claude-muted hover:text-claude-text transition">
+                        <button type="button" id="formatXmlBtn" aria-pressed="false" onclick="setFormatMode('xml')" class="text-xs px-2.5 py-1 rounded-md text-claude-muted hover:text-claude-text transition">
                             XML Tags
                         </button>
                     </div>
@@ -427,7 +440,7 @@
     </main>
 
     <!-- Hidden textarea fallback for reliable clipboard copy -->
-    <textarea id="clipboardFallback" class="sr-only" aria-hidden="true"></textarea>
+    <textarea id="clipboardFallback" class="sr-only" aria-hidden="true" tabindex="-1"></textarea>
 
     <script src="config.js"></script>
     <script src="js/common.js"></script>
