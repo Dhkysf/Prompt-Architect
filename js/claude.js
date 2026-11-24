@@ -135,6 +135,7 @@ function copyMasterPrompt() {
 }
 
 async function architectPrompt() {
+    if (generateBtn.disabled) return;
     const userIdea = simplePromptInput.value.trim();
     if (!userIdea) {
         showStatus("Please enter a short description or prompt idea first.", "error");
