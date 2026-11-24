@@ -26,6 +26,7 @@ const context = vm.createContext({
     window: windowStub,
     document: { getElementById: () => null },
     localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    URL,
     AbortController,
     setTimeout,
     clearTimeout,
@@ -184,7 +185,7 @@ const cases = [
                 schemaName: "test_schema",
                 themePrefix: "claude"
             }),
-            /Could not parse JSON from the API response\./
+            /did not return JSON/
         );
         assert.strictEqual(fetchCalls, 1);
     }]

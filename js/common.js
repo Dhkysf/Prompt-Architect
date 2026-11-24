@@ -1,5 +1,8 @@
 (function () {
     const STORAGE_KEY = "pa_api_settings_v1";
+    const MAX_RATE_LIMIT_WAIT_MS = 15000;
+    const UNKNOWN_RATE_LIMIT_WAIT_MS = 2000;
+    const REQUEST_TIMEOUT_MS = 60000;
     const DEFAULT_CONFIG = {
         provider: "gemini",
         geminiApiKey: "",
@@ -28,8 +31,78 @@
         customModel: ""
     };
 
+    function validateCustomBaseUrl(rawUrl) {
+        const trimmed = String(rawUrl || "").trim();
+        if (!trimmed) return null;
+        try {
+            const parsed = new URL(trimmed);
+            if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !parsed.hostname) {
+                return null;
+            }
+            return trimmed.replace(/\/+$/, "");
+        } catch (_) {
+            return null;
+        }
+    }
+
     function isLocalhostUrl(url) {
-        return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(\/|$)/i.test(url);
+        try {
+            const parsed = new URL(url);
+            if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+            const host = parsed.hostname.toLowerCase();
+            return host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function getHostFromUrl(url) {
+        try {
+            return new URL(url).host || "The server";
+        } catch (_) {
+            return "The server";
+        }
+    }
+
+    function normalizeProvider(value) {
+        if (value === null || value === undefined) {
+            return { provider: null, invalid: false, raw: "" };
+        }
+        const raw = String(value).trim();
+        if (!raw) {
+            return { provider: null, invalid: false, raw: "" };
+        }
+        const normalized = raw.toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(PROVIDER_META, normalized)) {
+            return { provider: normalized, invalid: false, raw };
+        }
+        return { provider: "gemini", invalid: true, raw };
+    }
+
+    function resolveProvider(uiVal, savedVal, cfgVal) {
+        const uiRes = normalizeProvider(uiVal);
+        if (uiRes.provider !== null) {
+            return { provider: uiRes.provider, warning: null };
+        }
+        const savedRes = normalizeProvider(savedVal);
+        if (savedRes.provider !== null) {
+            return {
+                provider: savedRes.provider,
+                warning: savedRes.invalid
+                    ? `Unknown provider '${sanitizeErrorMessage(savedRes.raw).slice(0, 40)}' in saved settings, using Gemini`
+                    : null
+            };
+        }
+        const cfgRes = normalizeProvider(cfgVal);
+        if (cfgRes.provider !== null) {
+            return {
+                provider: cfgRes.provider,
+                warning: cfgRes.invalid
+                    ? `Unknown provider '${sanitizeErrorMessage(cfgRes.raw).slice(0, 40)}' in config.js, using Gemini`
+                    : null
+            };
+        }
+        return { provider: "gemini", warning: null };
     }
 
     function getConfig() {
@@ -64,8 +137,8 @@
     function getActiveSettings() {
         const cfg = getConfig();
         const saved = readSavedSettings();
-        const provider = uiState.provider || saved.provider || cfg.provider || "gemini";
-        const meta = PROVIDER_META[provider] || PROVIDER_META.gemini;
+        const { provider } = resolveProvider(uiState.provider, saved.provider, cfg.provider);
+        const meta = PROVIDER_META[provider];
 
         const apiKey = (uiState[meta.key] || "").trim()
             || (saved[meta.key] || "").trim()
@@ -94,8 +167,9 @@
 
         const cfg = getConfig();
         const saved = readSavedSettings();
+        const resolved = resolveProvider(null, saved.provider, cfg.provider);
 
-        uiState.provider = saved.provider || cfg.provider || "gemini";
+        uiState.provider = resolved.provider;
         uiState.geminiApiKey = saved.geminiApiKey || "";
         uiState.geminiModel = saved.geminiModel || "";
         uiState.openrouterApiKey = saved.openrouterApiKey || "";
@@ -108,8 +182,11 @@
         providerEl.value = uiState.provider;
 
         function syncInputsFromState() {
-            const p = providerEl.value;
-            const meta = PROVIDER_META[p] || PROVIDER_META.gemini;
+            const p = normalizeProvider(providerEl.value).provider || "gemini";
+            if (providerEl.value !== p) {
+                providerEl.value = p;
+            }
+            const meta = PROVIDER_META[p];
 
             keyEl.value = uiState[meta.key] || "";
             keyEl.placeholder = (!uiState[meta.key] && (cfg[meta.key] || "").trim())
@@ -145,19 +222,21 @@
         }
 
         providerEl.addEventListener('change', () => {
-            uiState.provider = providerEl.value;
+            uiState.provider = normalizeProvider(providerEl.value).provider || "gemini";
             syncInputsFromState();
             persistIfRemembered();
         });
 
         keyEl.addEventListener('input', () => {
-            const meta = PROVIDER_META[providerEl.value] || PROVIDER_META.gemini;
+            const p = normalizeProvider(providerEl.value).provider || "gemini";
+            const meta = PROVIDER_META[p];
             uiState[meta.key] = keyEl.value;
             persistIfRemembered();
         });
 
         modelEl.addEventListener('input', () => {
-            const meta = PROVIDER_META[providerEl.value] || PROVIDER_META.gemini;
+            const p = normalizeProvider(providerEl.value).provider || "gemini";
+            const meta = PROVIDER_META[p];
             uiState[meta.model] = modelEl.value;
             persistIfRemembered();
         });
@@ -189,6 +268,9 @@
         });
 
         syncInputsFromState();
+        if (resolved.warning) {
+            showStatus(resolved.warning, "warning", themePrefix);
+        }
     }
 
     function initIcons() {
@@ -215,6 +297,7 @@
         banner.classList.remove(
             'hidden',
             'bg-red-950/50', 'border-red-800/60', 'text-red-200',
+            'bg-amber-950/50', 'border-amber-800/60', 'text-amber-200',
             'bg-emerald-950/50', 'border-emerald-800/60', 'text-emerald-200',
             'bg-claude-surface', 'border-claude-border', 'text-claude-text',
             'bg-gemini-surface', 'border-gemini-border', 'text-gemini-text'
@@ -222,6 +305,9 @@
 
         if (type === 'error') {
             banner.classList.add('bg-red-950/50', 'border-red-800/60', 'text-red-200');
+            iconEl.setAttribute('data-lucide', 'alert-circle');
+        } else if (type === 'warning') {
+            banner.classList.add('bg-amber-950/50', 'border-amber-800/60', 'text-amber-200');
             iconEl.setAttribute('data-lucide', 'alert-circle');
         } else if (type === 'success') {
             banner.classList.add('bg-emerald-950/50', 'border-emerald-800/60', 'text-emerald-200');
@@ -292,24 +378,141 @@
         }
     }
 
-    async function fetchWithRetry(url, options, maxRetries = 3, baseDelay = 1000) {
-        for (let i = 0; i <= maxRetries; i++) {
+    function extractSecrets(options) {
+        const secrets = [];
+        const headers = options && options.headers;
+        if (!headers) return secrets;
+        for (const [k, v] of Object.entries(headers)) {
+            const lk = k.toLowerCase();
+            if ((lk === 'authorization' || lk === 'x-goog-api-key') && typeof v === 'string' && v.trim()) {
+                const val = v.trim();
+                secrets.push(val);
+                if (/^bearer\s+/i.test(val)) {
+                    const token = val.replace(/^bearer\s+/i, '').trim();
+                    if (token) secrets.push(token);
+                }
+            }
+        }
+        return secrets;
+    }
+
+    function sanitizeErrorMessage(text, secrets = []) {
+        let msg = String(text || "").replace(/\s+/g, " ").trim();
+        for (const secret of secrets) {
+            if (secret && secret.length >= 4) {
+                msg = msg.split(secret).join("[redacted]");
+            }
+        }
+        msg = msg
+            .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+            .replace(/Authorization\s*:\s*[^\s,;]+/gi, "Authorization: [redacted]")
+            .replace(/AIza[0-9A-Za-z_-]{10,}/g, "[redacted]")
+            .replace(/sk-or-v1-[0-9a-f]{10,}/gi, "[redacted]");
+        if (msg.length > 120) {
+            msg = msg.slice(0, 117).trimEnd() + "...";
+        }
+        return msg;
+    }
+
+    function getRateLimitWaitMs(response, errorData) {
+        const retryAfter = response.headers && typeof response.headers.get === "function"
+            ? response.headers.get("Retry-After")
+            : null;
+        if (typeof retryAfter === "string" && retryAfter.trim()) {
+            const trimmed = retryAfter.trim();
+            if (/^\d+(?:\.\d+)?$/.test(trimmed)) {
+                const secs = Number(trimmed);
+                if (Number.isFinite(secs)) return Math.max(0, secs * 1000);
+            } else {
+                const dateMs = Date.parse(trimmed);
+                if (!Number.isNaN(dateMs)) {
+                    return Math.max(0, dateMs - Date.now());
+                }
+            }
+        }
+
+        const details = Array.isArray(errorData?.error?.details) ? errorData.error.details : [];
+        for (const d of details) {
+            if (d && d["@type"] === "type.googleapis.com/google.rpc.RetryInfo" && typeof d.retryDelay === "string") {
+                const m = d.retryDelay.match(/^\s*(\d+(?:\.\d+)?)s\s*$/i);
+                if (m) {
+                    const secs = Number(m[1]);
+                    if (Number.isFinite(secs)) return Math.max(0, secs * 1000);
+                }
+            }
+        }
+        return null;
+    }
+
+    function nonJsonErrorMessage(url, response) {
+        const rawCt = response.headers && typeof response.headers.get === "function"
+            ? response.headers.get("content-type")
+            : null;
+        const contentType = (typeof rawCt === "string" && rawCt.trim())
+            ? rawCt.split(";")[0].trim().slice(0, 50)
+            : "unknown";
+        return `${getHostFromUrl(url)} did not return JSON (got ${contentType}). Check the Base URL. It usually ends with /v1.`;
+    }
+
+    async function fetchWithRetry(url, options, providerLabel = "the provider", maxRetries = 3, baseDelay = 1000) {
+        const secrets = extractSecrets(options);
+        let serverRetries = 0;
+        let rateLimitRetries = 0;
+
+        while (true) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000);
+            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+            let retryDelayMs = null;
             try {
                 const response = await fetch(url, Object.assign({}, options, { signal: controller.signal }));
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    const err = new Error(errorData.error?.message || errorData.message || `HTTP ${response.status}`);
-                    err.retryable = (response.status === 429 || response.status >= 500);
-                    throw err;
-                }
-                try {
-                    return await response.json();
-                } catch (_) {
-                    const err = new Error("Could not parse JSON from the API response.");
-                    err.retryable = false;
-                    throw err;
+                    let errorData = null;
+                    let isJson = true;
+                    try {
+                        errorData = await response.json();
+                    } catch (_) {
+                        isJson = false;
+                    }
+
+                    if (response.status === 429) {
+                        const waitMs = getRateLimitWaitMs(response, errorData);
+                        if (waitMs !== null) {
+                            if (waitMs <= MAX_RATE_LIMIT_WAIT_MS && rateLimitRetries < 1) {
+                                rateLimitRetries += 1;
+                                retryDelayMs = waitMs;
+                            } else {
+                                const secs = Math.max(1, Math.ceil(waitMs / 1000));
+                                const err = new Error(`Rate limited by ${providerLabel}. Try again in about ${secs} s.`);
+                                err.retryable = false;
+                                throw err;
+                            }
+                        } else if (rateLimitRetries < 1) {
+                            rateLimitRetries += 1;
+                            retryDelayMs = UNKNOWN_RATE_LIMIT_WAIT_MS;
+                        } else {
+                            const err = new Error(`Rate limited by ${providerLabel}. Wait a minute and try again. On the free tier you may have hit the daily limit.`);
+                            err.retryable = false;
+                            throw err;
+                        }
+                    } else if (!isJson) {
+                        const err = new Error(`HTTP ${response.status}: ${nonJsonErrorMessage(url, response)}`);
+                        err.retryable = response.status >= 500;
+                        throw err;
+                    } else {
+                        const rawMsg = errorData?.error?.message || errorData?.message || "";
+                        const cleanMsg = sanitizeErrorMessage(rawMsg, secrets) || `HTTP ${response.status}`;
+                        const err = new Error(cleanMsg);
+                        err.retryable = response.status >= 500;
+                        throw err;
+                    }
+                } else {
+                    try {
+                        return await response.json();
+                    } catch (_) {
+                        const err = new Error(nonJsonErrorMessage(url, response));
+                        err.retryable = false;
+                        throw err;
+                    }
                 }
             } catch (err) {
                 if (err.name === 'AbortError') {
@@ -318,12 +521,17 @@
                 if (err instanceof TypeError && isLocalhostUrl(url)) {
                     throw err;
                 }
-                if (err.retryable === false || i === maxRetries) {
+                if (err.retryable === false || serverRetries >= maxRetries) {
                     throw err;
                 }
-                await new Promise(res => setTimeout(res, baseDelay * Math.pow(2, i)));
+                retryDelayMs = baseDelay * Math.pow(2, serverRetries);
+                serverRetries += 1;
             } finally {
                 clearTimeout(timeoutId);
+            }
+
+            if (retryDelayMs !== null) {
+                await new Promise(res => setTimeout(res, retryDelayMs));
             }
         }
     }
@@ -419,7 +627,7 @@
                 'x-goog-api-key': apiKey
             },
             body: JSON.stringify(payload)
-        });
+        }, PROVIDER_META.gemini.hint);
 
         const candidate = result?.candidates?.[0];
         const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
@@ -445,7 +653,7 @@
         return rawText;
     }
 
-    async function callOpenAICompat({ baseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName }) {
+    async function callOpenAICompat({ baseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName, providerLabel }) {
         const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
         const properties = {};
         fieldNames.forEach((name) => {
@@ -485,7 +693,7 @@
                 method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
-            });
+            }, providerLabel || PROVIDER_META.custom.hint);
         } catch (err) {
             if (err instanceof TypeError && isLocalhostUrl(cleanBaseUrl)) {
                 throw new Error(`Cannot reach ${cleanBaseUrl}. Is 9router running? Check the dashboard at http://localhost:20128/dashboard`);
@@ -505,11 +713,16 @@
         let rawText;
 
         if (provider === "custom") {
+            const validBaseUrl = validateCustomBaseUrl(baseUrl);
+            if (!validBaseUrl) {
+                showStatus("Base URL must start with http:// or https:// (for example http://localhost:20128/v1)", "error", themePrefix);
+                return null;
+            }
             if (!model) {
                 showStatus("Please enter a model name in API settings or config.js.", "error", themePrefix);
                 return null;
             }
-            rawText = await callOpenAICompat({ baseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
+            rawText = await callOpenAICompat({ baseUrl: validBaseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName, providerLabel: PROVIDER_META.custom.hint });
         } else {
             if (!apiKey) {
                 showStatus("Add your API key in API settings or config.js", "error", themePrefix);
@@ -521,7 +734,7 @@
                     showStatus("Please enter an OpenRouter model name in API settings or config.js.", "error", themePrefix);
                     return null;
                 }
-                rawText = await callOpenAICompat({ baseUrl: "https://openrouter.ai/api/v1", apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
+                rawText = await callOpenAICompat({ baseUrl: "https://openrouter.ai/api/v1", apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName, providerLabel: PROVIDER_META.openrouter.hint });
             } else {
                 const geminiModel = model || DEFAULT_CONFIG.geminiModel;
                 rawText = await callGemini({ apiKey, model: geminiModel, systemPrompt, userPrompt, fieldNames });
