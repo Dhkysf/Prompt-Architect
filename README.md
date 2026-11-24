@@ -41,6 +41,11 @@ You can skip `config.js` and enter your key directly in the collapsible **API se
 
 Note: This works when the HTML file is opened from your own PC. A hosted page (such as GitHub Pages) may trigger the browser's local-network permission prompt, and other devices (such as a phone) cannot reach `localhost`.
 
+## Troubleshooting
+
+- **"Rate limited"**: You hit the provider's request or daily quota limit—wait the suggested seconds (or until the next day on a free tier) before clicking Architect again.
+- **"did not return JSON"**: The server returned a web page or error page instead of API JSON—check **Base URL** in **API settings** (OpenAI-compatible gateways usually end with `/v1`).
+
 ## Security
 
 - `config.js` is listed in `.gitignore` so your local key is not committed.

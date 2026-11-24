@@ -27,6 +27,7 @@ Owner: a beginner on Windows who uses the app personally. The repo is **public**
 │  ├─ claude.js    Claude page: fields, example, compile, system prompt
 │  └─ gemini.js    Gemini page: fields, example, compile, system prompt
 ├─ tests/
+│  ├─ fetch_test.js  Node unit test for rate limits, non-JSON, Base URL & provider casing
 │  └─ parse_test.js  Node unit test for shared response parsing & validation
 ├─ vendor/
 │  ├─ tailwindcss-play-3.4.17.js
@@ -88,7 +89,7 @@ If codegraph is not available, fall back to reading the files. This repo is smal
 Run these and report the results in your reply:
 
 1. `node --check js/common.js js/claude.js js/gemini.js`. If Node is not installed, skip it and say so.
-2. `node tests/parse_test.js` (all cases must pass).
+2. `node tests/parse_test.js` and `node tests/fetch_test.js` (all cases must pass).
 3. Secret scan on tracked files and staged changes. Both must print nothing:
    ```powershell
    git grep -nE "AIza[0-9A-Za-z_-]{35}|sk-or-v1-[0-9a-f]{20,}"
