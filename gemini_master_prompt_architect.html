@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Prompt Architect — Structured Master Prompt Builder</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter, Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@1.79.0/dist/umd/lucide.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        gemini: {
+                            bg: '#131314',
+                            surface: '#1e1f20',
+                            surfaceHover: '#28292a',
+                            border: '#333537',
+                            text: '#e3e3e3',
+                            muted: '#9aa0a6',
+                            blue: '#4285f4',
+                            purple: '#9b72cb',
+                            pink: '#d96570',
+                            green: '#34a853',
+                            yellow: '#fbbc04',
+                            cyan: '#4fd1c5',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #131314;
+            color: #e3e3e3;
+        }
+        /* Custom subtle scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #131314;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333537;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #484a4d;
+        }
+        .gemini-gradient-text {
+            background: linear-gradient(74deg, #4285f4 0%, #9b72cb 45%, #d96570 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gemini-gradient-btn {
+            background: linear-gradient(135deg, #4285f4 0%, #7b61ff 50%, #d96570 100%);
+        }
+        .gemini-gradient-btn:hover {
+            filter: brightness(1.08);
+        }
+        .section-card {
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .section-card:focus-within {
+            background-color: #242527;
+            border-color: #4c4f52;
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.45; }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-[#4285f4]/30 selection:text-[#e3e3e3]">
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-gemini-border bg-gemini-bg/85 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <!-- Gemini 4-Point Sparkle SVG Icon -->
+                <svg class="w-7 h-7 shrink-0" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2C14 8.62742 19.3726 14 26 14C19.3726 14 14 19.3726 14 26C14 19.3726 8.62742 14 2 14C8.62742 14 14 8.62742 14 2Z" fill="url(#gemini_spark_grad)"/>
+                    <defs>
+                        <linearGradient id="gemini_spark_grad" x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#4285F4"/>
+                            <stop offset="0.5" stop-color="#9B72CB"/>
+                            <stop offset="1" stop-color="#D96570"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <div>
+                    <h1 class="font-display text-lg sm:text-2xl font-semibold tracking-tight text-gemini-text">
+                        The Anatomy of a <span class="gemini-gradient-text">Gemini</span> prompt
+                    </h1>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="loadExampleData()" class="text-xs sm:text-sm px-3 py-1.5 rounded-lg bg-gemini-surface hover:bg-gemini-surfaceHover border border-gemini-border text-gemini-muted hover:text-gemini-text transition flex items-center gap-1.5 cursor-pointer" title="Load the exact SaaS Go-To-Market blueprint from the image">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-gemini-blue"></i>
+                    <span class="hidden sm:inline">Load Blueprint Example</span>
+                    <span class="sm:hidden">Example</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-9">
+        
+        <!-- Input Hero Section -->
+        <section class="mb-8">
+            <div class="bg-gemini-surface border border-gemini-border rounded-2xl p-5 sm:p-6 shadow-xl">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <label for="simplePromptInput" class="text-sm font-medium text-gemini-text flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-gemini-blue"></span>
+                        Describe your goal in plain words
+                    </label>
+                    <span class="text-xs text-gemini-muted">Gemini will structure rules at the top, data in the middle, and the ask at the end</span>
+                </div>
+                
+                <div class="relative">
+                    <textarea 
+                        id="simplePromptInput" 
+                        rows="3" 
+                        class="w-full bg-gemini-bg border border-gemini-border rounded-xl p-4 text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue focus:ring-1 focus:ring-gemini-blue transition resize-none text-sm sm:text-base"
+                        placeholder="e.g., Build a 90-day launch plan for my AI task manager for founders with a 2-person team and lean budget..."
+                    ></textarea>
+                </div>
+
+                <!-- Quick Idea Chips & Generate Button -->
+                <div class="mt-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs text-gemini-muted mr-1">Try:</span>
+                        <button onclick="setQuickIdea('Review my Python FastAPI codebase for security vulnerabilities and latency bottlenecks')" class="text-xs px-2.5 py-1.5 rounded-lg bg-gemini-bg hover:bg-gemini-surfaceHover border border-gemini-border text-gemini-muted hover:text-gemini-text transition text-left cursor-pointer">
+                            Code Security Audit
+                        </button>
+                        <button onclick="setQuickIdea('Analyze Q3 customer churn transcripts and propose 5 high-ROI retention experiments')" class="text-xs px-2.5 py-1.5 rounded-lg bg-gemini-bg hover:bg-gemini-surfaceHover border border-gemini-border text-gemini-muted hover:text-gemini-text transition text-left cursor-pointer">
+                            Churn Transcript Analysis
+                        </button>
+                        <button onclick="setQuickIdea('Create a technical PRD for an offline-first mobile note-taking app with AI search')" class="text-xs px-2.5 py-1.5 rounded-lg bg-gemini-bg hover:bg-gemini-surfaceHover border border-gemini-border text-gemini-muted hover:text-gemini-text transition text-left cursor-pointer">
+                            Technical PRD
+                        </button>
+                    </div>
+
+                    <button 
+                        id="generateBtn" 
+                        onclick="architectPrompt()" 
+                        class="px-6 py-3 rounded-xl gemini-gradient-btn active:scale-[0.99] text-white font-medium text-sm sm:text-base shadow-lg shadow-gemini-blue/20 transition flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <i data-lucide="wand-2" class="w-4 h-4"></i>
+                        <span id="generateBtnText">Architect Gemini Prompt</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Error / Status Toast Banner -->
+        <div id="statusBanner" class="hidden mb-6 p-4 rounded-xl border text-sm flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+                <i id="statusIcon" data-lucide="info" class="w-4 h-4 shrink-0"></i>
+                <span id="statusMessage"></span>
+            </div>
+            <button onclick="hideStatus()" class="text-current opacity-70 hover:opacity-100 cursor-pointer">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- Two-Column Workspace: Left = 3-Zone / 6-Part Anatomy Editor, Right = Assembled Master Prompt -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+            
+            <!-- Left Column: The Gemini Prompt Anatomy (7 cols on lg) -->
+            <div class="lg:col-span-7 space-y-6">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="font-display text-lg sm:text-xl font-semibold text-gemini-text flex items-center gap-2">
+                        <span>Gemini Prompt Structure</span>
+                        <span class="text-xs font-sans font-normal px-2 py-0.5 rounded-full bg-gemini-surface border border-gemini-border text-gemini-muted">Editable</span>
+                    </h2>
+                    <button onclick="clearAllFields()" class="text-xs text-gemini-muted hover:text-gemini-text transition flex items-center gap-1 cursor-pointer">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                        Clear
+                    </button>
+                </div>
+
+                <!-- ZONE 1: TOP — RULES THAT ANCHOR REASONING -->
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2 px-1">
+                        <span class="text-[11px] font-mono uppercase tracking-wider text-gemini-muted font-semibold">
+                            ① TOP — RULES THAT ANCHOR REASONING (OR PUT IN SYSTEM INSTRUCTION)
+                        </span>
+                    </div>
+
+                    <!-- 1. ROLE (Blue) -->
+                    <div class="section-card bg-gemini-surface border border-gemini-border rounded-xl p-4 sm:p-5 relative overflow-hidden">
+                        <div class="flex items-stretch gap-3.5 sm:gap-4">
+                            <div class="w-1 rounded-full bg-gemini-blue shrink-0"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-blue">
+                                        Role <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;role&gt;</span>
+                                    </span>
+                                    <span class="text-[11px] text-gemini-muted">Who Gemini is. Short, specific.</span>
+                                </div>
+                                <textarea 
+                                    id="field-role" 
+                                    rows="3" 
+                                    oninput="updateCombinedPrompt()"
+                                    class="w-full bg-transparent text-gemini-text text-sm leading-relaxed focus:outline-none resize-y placeholder-gemini-muted/40"
+                                    placeholder="You are a senior [expert role] for [domain]. You are precise, analytical, and prioritize [X] over [Y]."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. CONSTRAINTS (Purple) -->
+                    <div class="section-card bg-gemini-surface border border-gemini-border rounded-xl p-4 sm:p-5 relative overflow-hidden">
+                        <div class="flex items-stretch gap-3.5 sm:gap-4">
+                            <div class="w-1 rounded-full bg-gemini-purple shrink-0"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-purple">
+                                        Constraints <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;constraints&gt;</span>
+                                    </span>
+                                    <span class="text-[11px] text-gemini-muted">Do's & don'ts, tone, how to handle gaps.</span>
+                                </div>
+                                <textarea 
+                                    id="field-constraints" 
+                                    rows="4" 
+                                    oninput="updateCombinedPrompt()"
+                                    class="w-full bg-transparent text-gemini-text text-sm leading-relaxed focus:outline-none resize-y placeholder-gemini-muted/40"
+                                    placeholder="- Verbosity: medium. Tone: direct, practical.&#10;- Hard boundary / budget / tech limit.&#10;- If critical info is missing, ask once. Otherwise state your assumptions."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. OUTPUT FORMAT (Pink/Coral) -->
+                    <div class="section-card bg-gemini-surface border border-gemini-border rounded-xl p-4 sm:p-5 relative overflow-hidden">
+                        <div class="flex items-stretch gap-3.5 sm:gap-4">
+                            <div class="w-1 rounded-full bg-gemini-pink shrink-0"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-pink">
+                                        Output Format <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;output_format&gt;</span>
+                                    </span>
+                                    <span class="text-[11px] text-gemini-muted">Exact shape of the answer.</span>
+                                </div>
+                                <textarea 
+                                    id="field-output" 
+                                    rows="3" 
+                                    oninput="updateCombinedPrompt()"
+                                    class="w-full bg-transparent text-gemini-text text-sm leading-relaxed focus:outline-none resize-y placeholder-gemini-muted/40"
+                                    placeholder="Structured format. For each item:&#10;Field 1 · Field 2 · Risk/Criteria · Deliverable.&#10;End with a clear decision gate or summary."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ZONE 2: MIDDLE — DATA, NOT INSTRUCTIONS -->
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2 px-1">
+                        <span class="text-[11px] font-mono uppercase tracking-wider text-gemini-muted font-semibold">
+                            ② MIDDLE — DATA, NOT INSTRUCTIONS
+                        </span>
+                    </div>
+
+                    <!-- 4. CONTEXT (Green) -->
+                    <div class="section-card bg-gemini-surface border border-gemini-border rounded-xl p-4 sm:p-5 relative overflow-hidden">
+                        <div class="flex items-stretch gap-3.5 sm:gap-4">
+                            <div class="w-1 rounded-full bg-gemini-green shrink-0"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-green">
+                                        Context <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;context&gt;</span>
+                                    </span>
+                                    <span class="text-[11px] text-gemini-muted">Long material goes here, before the question.</span>
+                                </div>
+                                <textarea 
+                                    id="field-context" 
+                                    rows="4" 
+                                    oninput="updateCombinedPrompt()"
+                                    class="w-full bg-transparent text-gemini-text text-sm leading-relaxed focus:outline-none resize-y placeholder-gemini-muted/40"
+                                    placeholder="Subject/Product: ...&#10;Team/Resources: ...&#10;Key risks: ...&#10;[paste reference docs, data, or code here]"
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ZONE 3: BOTTOM — THE ASK -->
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2 px-1">
+                        <span class="text-[11px] font-mono uppercase tracking-wider text-gemini-muted font-semibold">
+                            ③ BOTTOM — THE ASK
+                        </span>
+                    </div>
+
+                    <!-- 5. TASK (Yellow/Amber) -->
+                    <div class="section-card bg-gemini-surface border border-gemini-border rounded-xl p-4 sm:p-5 relative overflow-hidden">
+                        <div class="flex items-stretch gap-3.5 sm:gap-4">
+                            <div class="w-1 rounded-full bg-gemini-yellow shrink-0"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-yellow">
+                                        Task <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;task&gt;</span>
+                                    </span>
+                                    <span class="text-[11px] text-gemini-muted">One clear request.</span>
+                                </div>
+                                <textarea 
+                                    id="field-task" 
+                                    rows="2" 
+                                    oninput="updateCombinedPrompt()"
+                                    class="w-full bg-transparent text-gemini-text text-sm leading-relaxed focus:outline-none resize-y placeholder-gemini-muted/40"
+                                    placeholder="Build a [concrete deliverable] for this [context]. Validate [key assumption] first, then make it ready to execute."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. FINAL INSTRUCTION (Cyan/Sky Blue) -->
+                    <div class="section-card bg-gemini-surface border border-gemini-border rounded-xl p-4 sm:p-5 relative overflow-hidden">
+                        <div class="flex items-stretch gap-3.5 sm:gap-4">
+                            <div class="w-1 rounded-full bg-gemini-cyan shrink-0"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-gemini-cyan">
+                                        Final Instruction <span class="font-mono text-[11px] opacity-75 lowercase ml-1">&lt;final_instruction&gt;</span>
+                                    </span>
+                                    <span class="text-[11px] text-gemini-muted">Anchor + stop condition, at the very end.</span>
+                                </div>
+                                <textarea 
+                                    id="field-final" 
+                                    rows="3" 
+                                    oninput="updateCombinedPrompt()"
+                                    class="w-full bg-transparent text-gemini-text text-sm leading-relaxed focus:outline-none resize-y placeholder-gemini-muted/40"
+                                    placeholder="Based on the context above: plan first, check every action against the constraints, then answer. Done when: [specific stop criteria]."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gemini-Specific Rule Callout Box (Matching bottom banner of the reference image) -->
+                <div class="rounded-xl p-4 border border-gemini-border bg-gradient-to-r from-[#1e2330] via-[#241f2d] to-[#2b1f24] text-xs text-gemini-text/90 leading-relaxed">
+                    <strong class="font-semibold text-white">Gemini-specific:</strong> one consistent format (XML tags <em class="text-gemini-muted">or</em> Markdown headings, never mixed) · rules & format at the top · long context in the middle · the question at the end, starting with <code class="px-1.5 py-0.5 rounded bg-black/30 font-mono text-gemini-cyan">"Based on the context above..."</code>
+                </div>
+            </div>
+
+            <!-- Right Column: Compiled Master Prompt Ready to Copy (5 cols on lg) -->
+            <div class="lg:col-span-5 lg:sticky lg:top-24 space-y-4">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="font-display text-lg sm:text-xl font-semibold text-gemini-text">Compiled Gemini Prompt</h2>
+                    <!-- Consistent Format Switcher: XML Tags OR Markdown Headings (Never Mixed) -->
+                    <div class="flex items-center gap-1 bg-gemini-surface border border-gemini-border rounded-lg p-1" title="Gemini best practice: use one consistent delimiter format">
+                        <button id="formatXmlBtn" onclick="setFormatMode('xml')" class="text-xs px-2.5 py-1 rounded-md bg-gemini-surfaceHover text-gemini-text font-medium transition cursor-pointer">
+                            XML Tags
+                        </button>
+                        <button id="formatMdBtn" onclick="setFormatMode('markdown')" class="text-xs px-2.5 py-1 rounded-md text-gemini-muted hover:text-gemini-text transition cursor-pointer">
+                            Markdown
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-[#0e0e0f] border border-gemini-border rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+                    <!-- Editor Top Bar -->
+                    <div class="px-4 py-3 bg-gemini-surface/70 border-b border-gemini-border flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-gemini-blue"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-gemini-purple"></span>
+                            <span class="w-2.5 h-2.5 rounded-full bg-gemini-pink"></span>
+                            <span class="text-xs font-mono text-gemini-muted ml-1" id="charCountLabel">0 chars</span>
+                        </div>
+                        <button 
+                            id="copyBtn"
+                            onclick="copyMasterPrompt()" 
+                            class="px-3 py-1.5 rounded-lg bg-gemini-blue/15 hover:bg-gemini-blue/25 border border-gemini-blue/40 text-gemini-blue text-xs font-medium transition flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span id="copyBtnText">Copy Master Prompt</span>
+                        </button>
+                    </div>
+
+                    <!-- Preview Body -->
+                    <div class="p-5 max-h-[620px] overflow-y-auto">
+                        <pre id="compiledOutput" class="font-mono text-xs sm:text-[13px] leading-relaxed text-gemini-text whitespace-pre-wrap break-words selection:bg-gemini-blue/30">Your architected Gemini prompt will appear here...</pre>
+                    </div>
+
+                    <!-- Color Legend Footer -->
+                    <div class="px-4 py-3 bg-gemini-surface/40 border-t border-gemini-border flex flex-wrap items-center justify-between gap-2 text-[11px] text-gemini-muted">
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gemini-blue"></span>Role</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gemini-purple"></span>Constraints</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gemini-pink"></span>Format</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gemini-green"></span>Context</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gemini-yellow"></span>Task</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gemini-cyan"></span>Final</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API System Instruction Tip Card -->
+                <div class="bg-gemini-surface/50 border border-gemini-border/70 rounded-xl p-4 text-xs text-gemini-muted leading-relaxed flex items-start gap-3">
+                    <i data-lucide="layers" class="w-4 h-4 text-gemini-purple shrink-0 mt-0.5"></i>
+                    <p>
+                        <strong class="text-gemini-text font-medium">API / AI Studio Tip:</strong> When using the Gemini API, you can place <code class="text-gemini-blue">&lt;role&gt;</code>, <code class="text-gemini-purple">&lt;constraints&gt;</code>, and <code class="text-gemini-pink">&lt;output_format&gt;</code> into <code class="text-gemini-text">systemInstruction</code>, and pass <code class="text-gemini-green">&lt;context&gt;</code> + <code class="text-gemini-yellow">&lt;task&gt;</code> + <code class="text-gemini-cyan">&lt;final_instruction&gt;</code> as the user message.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Hidden textarea fallback for reliable clipboard copy -->
+    <textarea id="clipboardFallback" class="sr-only" aria-hidden="true"></textarea>
+
+    <script src="config.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/gemini.js"></script>
+</body>
+</html>
