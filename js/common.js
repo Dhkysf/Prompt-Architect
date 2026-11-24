@@ -283,7 +283,13 @@
                     err.retryable = (response.status === 429 || response.status >= 500);
                     throw err;
                 }
-                return await response.json();
+                try {
+                    return await response.json();
+                } catch (_) {
+                    const err = new Error("Could not parse JSON from the API response.");
+                    err.retryable = false;
+                    throw err;
+                }
             } catch (err) {
                 if (err.name === 'AbortError') {
                     throw new Error("Request timed out after 60 seconds.");
@@ -302,6 +308,9 @@
     }
 
     function parseJsonResponse(rawText) {
+        if (typeof rawText !== "string") {
+            throw new Error("Could not parse structured JSON from the model response. Try a model that supports structured outputs.");
+        }
         const cleaned = rawText
             .trim()
             .replace(/^```(?:json)?\s*/i, '')
@@ -321,6 +330,40 @@
             }
             throw new Error("Could not parse structured JSON from the model response. Try a model that supports structured outputs.");
         }
+    }
+
+    function coerceFieldValue(value) {
+        if (typeof value === "string") return value.trim();
+        if (typeof value === "number" || typeof value === "boolean") return String(value);
+        if (Array.isArray(value) && value.every(v => typeof v === "string" || typeof v === "number")) {
+            return value.join("\n").trim();
+        }
+        return "";
+    }
+
+    function validateStructuredResponse(rawText, fieldNames) {
+        const parsed = parseJsonResponse(rawText);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            const actual = parsed === null ? "null" : Array.isArray(parsed) ? "an array" : typeof parsed;
+            throw new Error(`The model returned ${actual} instead of an object`);
+        }
+
+        const result = {};
+        const missing = [];
+        for (const name of fieldNames) {
+            const raw = Object.prototype.hasOwnProperty.call(parsed, name) ? parsed[name] : undefined;
+            const value = coerceFieldValue(raw);
+            if (!value) {
+                missing.push(name);
+            } else {
+                result[name] = value;
+            }
+        }
+
+        if (missing.length > 0) {
+            throw new Error(`The model reply is missing: ${missing.join(", ")}. Your fields were not changed.`);
+        }
+        return result;
     }
 
     async function callGemini({ apiKey, model, systemPrompt, userPrompt, fieldNames }) {
@@ -357,11 +400,28 @@
             body: JSON.stringify(payload)
         });
 
-        const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) {
+        const candidate = result?.candidates?.[0];
+        const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
+        const rawText = parts
+            .filter(p => p && !p.thought && typeof p.text === "string")
+            .map(p => p.text)
+            .join("");
+
+        if (!rawText.trim()) {
+            const blockReason = result?.promptFeedback?.blockReason;
+            if (blockReason) {
+                throw new Error(`Blocked by Gemini safety filter (${blockReason})`);
+            }
+            const finishReason = candidate?.finishReason;
+            if (finishReason === "SAFETY" || finishReason === "RECITATION") {
+                throw new Error(`Blocked by Gemini safety filter (${finishReason})`);
+            }
+            if (finishReason === "MAX_TOKENS") {
+                throw new Error("The reply was cut off. Try again or shorten your idea.");
+            }
             throw new Error("Received an empty response from the AI model.");
         }
-        return JSON.parse(rawText);
+        return rawText;
     }
 
     async function callOpenAICompat({ baseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName }) {
@@ -413,38 +473,41 @@
         }
 
         const content = result?.choices?.[0]?.message?.content;
-        if (!content) {
+        if (typeof content !== "string" || !content.trim()) {
             throw new Error("Received an empty response from the AI model.");
         }
-        return parseJsonResponse(content);
+        return content;
     }
 
     async function generateStructuredPrompt({ systemPrompt, userPrompt, fieldNames, schemaName, themePrefix }) {
         const { provider, apiKey, model, baseUrl } = getActiveSettings();
+        let rawText;
 
         if (provider === "custom") {
             if (!model) {
                 showStatus("Please enter a model name in API settings or config.js.", "error", themePrefix);
                 return null;
             }
-            return await callOpenAICompat({ baseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
-        }
-
-        if (!apiKey) {
-            showStatus("Add your API key in API settings or config.js", "error", themePrefix);
-            return null;
-        }
-
-        if (provider === "openrouter") {
-            if (!model) {
-                showStatus("Please enter an OpenRouter model name in API settings or config.js.", "error", themePrefix);
+            rawText = await callOpenAICompat({ baseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
+        } else {
+            if (!apiKey) {
+                showStatus("Add your API key in API settings or config.js", "error", themePrefix);
                 return null;
             }
-            return await callOpenAICompat({ baseUrl: "https://openrouter.ai/api/v1", apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
+
+            if (provider === "openrouter") {
+                if (!model) {
+                    showStatus("Please enter an OpenRouter model name in API settings or config.js.", "error", themePrefix);
+                    return null;
+                }
+                rawText = await callOpenAICompat({ baseUrl: "https://openrouter.ai/api/v1", apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
+            } else {
+                const geminiModel = model || DEFAULT_CONFIG.geminiModel;
+                rawText = await callGemini({ apiKey, model: geminiModel, systemPrompt, userPrompt, fieldNames });
+            }
         }
 
-        const geminiModel = model || DEFAULT_CONFIG.geminiModel;
-        return await callGemini({ apiKey, model: geminiModel, systemPrompt, userPrompt, fieldNames });
+        return validateStructuredResponse(rawText, fieldNames);
     }
 
     window.PA = {

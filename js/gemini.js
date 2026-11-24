@@ -184,12 +184,12 @@ Do NOT include XML tags or Markdown headers inside the JSON field values themsel
         if (!structured) return;
 
         // Populate fields smoothly in top-to-bottom order
-        fields.role.value = structured.role || "";
-        fields.constraints.value = structured.constraints || "";
-        fields.output.value = structured.outputFormat || "";
-        fields.context.value = structured.context || "";
-        fields.task.value = structured.task || "";
-        fields.final.value = structured.finalInstruction || "";
+        fields.role.value = structured.role;
+        fields.constraints.value = structured.constraints;
+        fields.output.value = structured.outputFormat;
+        fields.context.value = structured.context;
+        fields.task.value = structured.task;
+        fields.final.value = structured.finalInstruction;
 
         updateCombinedPrompt();
         showStatus("Gemini Master Prompt architected across all 3 structural zones!", "success");

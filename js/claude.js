@@ -171,12 +171,12 @@ Keep the tone sharp, executive, practical, and free of fluff. Every section shou
         if (!structured) return;
 
         // Populate fields smoothly
-        fields.role.value = structured.role || "";
-        fields.task.value = structured.task || "";
-        fields.context.value = structured.context || "";
-        fields.reasoning.value = structured.reasoning || "";
-        fields.stop.value = structured.stopConditions || "";
-        fields.output.value = structured.output || "";
+        fields.role.value = structured.role;
+        fields.task.value = structured.task;
+        fields.context.value = structured.context;
+        fields.reasoning.value = structured.reasoning;
+        fields.stop.value = structured.stopConditions;
+        fields.output.value = structured.output;
 
         updateCombinedPrompt();
         showStatus("Master prompt architected across all 6 structural layers!", "success");
