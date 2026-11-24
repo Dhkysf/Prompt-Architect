@@ -5,5 +5,8 @@ window.PA_CONFIG = {
     geminiApiKey: "",
     geminiModel: "gemini-3-flash-preview",
     openrouterApiKey: "",
-    openrouterModel: ""
+    openrouterModel: "",
+    customBaseUrl: "http://localhost:20128/v1",
+    customApiKey: "",
+    customModel: ""
 };

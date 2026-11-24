@@ -5,7 +5,16 @@
         geminiApiKey: "",
         geminiModel: "gemini-3-flash-preview",
         openrouterApiKey: "",
-        openrouterModel: ""
+        openrouterModel: "",
+        customBaseUrl: "http://localhost:20128/v1",
+        customApiKey: "",
+        customModel: ""
+    };
+
+    const PROVIDER_META = {
+        gemini: { key: "geminiApiKey", model: "geminiModel", hint: "Gemini", modelPlaceholder: "gemini-3-flash-preview" },
+        openrouter: { key: "openrouterApiKey", model: "openrouterModel", hint: "OpenRouter", modelPlaceholder: "e.g. google/gemini-2.5-flash" },
+        custom: { key: "customApiKey", model: "customModel", hint: "OpenAI-compatible", modelPlaceholder: "e.g. model name from 9router" }
     };
 
     const uiState = {
@@ -13,8 +22,15 @@
         geminiApiKey: "",
         geminiModel: "",
         openrouterApiKey: "",
-        openrouterModel: ""
+        openrouterModel: "",
+        customBaseUrl: "",
+        customApiKey: "",
+        customModel: ""
     };
+
+    function isLocalhostUrl(url) {
+        return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(\/|$)/i.test(url);
+    }
 
     function getConfig() {
         return Object.assign({}, DEFAULT_CONFIG, window.PA_CONFIG || {});
@@ -49,24 +65,28 @@
         const cfg = getConfig();
         const saved = readSavedSettings();
         const provider = uiState.provider || saved.provider || cfg.provider || "gemini";
-        const isOpenRouter = provider === "openrouter";
-        const keyField = isOpenRouter ? "openrouterApiKey" : "geminiApiKey";
-        const modelField = isOpenRouter ? "openrouterModel" : "geminiModel";
+        const meta = PROVIDER_META[provider] || PROVIDER_META.gemini;
 
-        const apiKey = (uiState[keyField] || "").trim()
-            || (saved[keyField] || "").trim()
-            || (cfg[keyField] || "").trim();
-        const model = (uiState[modelField] || "").trim()
-            || (saved[modelField] || "").trim()
-            || (cfg[modelField] || "").trim();
+        const apiKey = (uiState[meta.key] || "").trim()
+            || (saved[meta.key] || "").trim()
+            || (cfg[meta.key] || "").trim();
+        const model = (uiState[meta.model] || "").trim()
+            || (saved[meta.model] || "").trim()
+            || (cfg[meta.model] || "").trim();
+        const baseUrl = (uiState.customBaseUrl || "").trim()
+            || (saved.customBaseUrl || "").trim()
+            || (cfg.customBaseUrl || "").trim()
+            || DEFAULT_CONFIG.customBaseUrl;
 
-        return { provider, apiKey, model };
+        return { provider, apiKey, model, baseUrl };
     }
 
     function initApiSettings(themePrefix = 'claude') {
         const providerEl = document.getElementById('pa-provider');
         const keyEl = document.getElementById('pa-api-key');
         const modelEl = document.getElementById('pa-model');
+        const baseUrlWrap = document.getElementById('pa-base-url-wrap');
+        const baseUrlEl = document.getElementById('pa-base-url');
         const rememberEl = document.getElementById('pa-remember');
         const forgetBtn = document.getElementById('pa-forget-btn');
         const hintEl = document.getElementById('pa-settings-hint');
@@ -80,26 +100,32 @@
         uiState.geminiModel = saved.geminiModel || "";
         uiState.openrouterApiKey = saved.openrouterApiKey || "";
         uiState.openrouterModel = saved.openrouterModel || "";
+        uiState.customBaseUrl = saved.customBaseUrl || "";
+        uiState.customApiKey = saved.customApiKey || "";
+        uiState.customModel = saved.customModel || "";
 
-        rememberEl.checked = Boolean(saved.geminiApiKey || saved.openrouterApiKey);
+        rememberEl.checked = Object.keys(saved).length > 0;
         providerEl.value = uiState.provider;
 
         function syncInputsFromState() {
             const p = providerEl.value;
-            const isOR = p === "openrouter";
-            const keyField = isOR ? "openrouterApiKey" : "geminiApiKey";
-            const modelField = isOR ? "openrouterModel" : "geminiModel";
+            const meta = PROVIDER_META[p] || PROVIDER_META.gemini;
 
-            keyEl.value = uiState[keyField] || "";
-            keyEl.placeholder = (!uiState[keyField] && (cfg[keyField] || "").trim())
+            keyEl.value = uiState[meta.key] || "";
+            keyEl.placeholder = (!uiState[meta.key] && (cfg[meta.key] || "").trim())
                 ? "Using key from config.js"
-                : "Paste API key (or set in config.js)";
+                : (p === "custom" ? "API key (optional for local gateways)" : "Paste API key (or set in config.js)");
 
-            modelEl.value = uiState[modelField] || cfg[modelField] || "";
-            modelEl.placeholder = isOR ? "e.g. google/gemini-2.5-flash" : "gemini-3-flash-preview";
+            modelEl.value = uiState[meta.model] || cfg[meta.model] || "";
+            modelEl.placeholder = meta.modelPlaceholder;
+
+            if (baseUrlWrap && baseUrlEl) {
+                baseUrlWrap.classList.toggle('hidden', p !== "custom");
+                baseUrlEl.value = uiState.customBaseUrl || cfg.customBaseUrl || DEFAULT_CONFIG.customBaseUrl;
+            }
 
             if (hintEl) {
-                hintEl.textContent = isOR ? "OpenRouter" : "Gemini";
+                hintEl.textContent = meta.hint;
             }
         }
 
@@ -110,7 +136,10 @@
                     geminiApiKey: uiState.geminiApiKey,
                     geminiModel: uiState.geminiModel,
                     openrouterApiKey: uiState.openrouterApiKey,
-                    openrouterModel: uiState.openrouterModel
+                    openrouterModel: uiState.openrouterModel,
+                    customBaseUrl: uiState.customBaseUrl,
+                    customApiKey: uiState.customApiKey,
+                    customModel: uiState.customModel
                 });
             }
         }
@@ -122,16 +151,23 @@
         });
 
         keyEl.addEventListener('input', () => {
-            const keyField = providerEl.value === "openrouter" ? "openrouterApiKey" : "geminiApiKey";
-            uiState[keyField] = keyEl.value;
+            const meta = PROVIDER_META[providerEl.value] || PROVIDER_META.gemini;
+            uiState[meta.key] = keyEl.value;
             persistIfRemembered();
         });
 
         modelEl.addEventListener('input', () => {
-            const modelField = providerEl.value === "openrouter" ? "openrouterModel" : "geminiModel";
-            uiState[modelField] = modelEl.value;
+            const meta = PROVIDER_META[providerEl.value] || PROVIDER_META.gemini;
+            uiState[meta.model] = modelEl.value;
             persistIfRemembered();
         });
+
+        if (baseUrlEl) {
+            baseUrlEl.addEventListener('input', () => {
+                uiState.customBaseUrl = baseUrlEl.value;
+                persistIfRemembered();
+            });
+        }
 
         rememberEl.addEventListener('change', () => {
             if (rememberEl.checked) {
@@ -144,6 +180,7 @@
         forgetBtn.addEventListener('click', () => {
             uiState.geminiApiKey = "";
             uiState.openrouterApiKey = "";
+            uiState.customApiKey = "";
             keyEl.value = "";
             rememberEl.checked = false;
             clearSavedSettings();
@@ -251,6 +288,9 @@
                 if (err.name === 'AbortError') {
                     throw new Error("Request timed out after 60 seconds.");
                 }
+                if (err instanceof TypeError && isLocalhostUrl(url)) {
+                    throw err;
+                }
                 if (err.retryable === false || i === maxRetries) {
                     throw err;
                 }
@@ -324,7 +364,8 @@
         return JSON.parse(rawText);
     }
 
-    async function callOpenRouter({ apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName }) {
+    async function callOpenAICompat({ baseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName }) {
+        const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
         const properties = {};
         fieldNames.forEach((name) => {
             properties[name] = { type: "string" };
@@ -332,6 +373,7 @@
 
         const payload = {
             model: model,
+            stream: false,
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt }
@@ -351,24 +393,43 @@
             }
         };
 
-        const result = await fetchWithRetry("https://openrouter.ai/api/v1/chat/completions", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(payload)
-        });
+        const headers = { 'Content-Type': 'application/json' };
+        if (apiKey) {
+            headers['Authorization'] = `Bearer ${apiKey}`;
+        }
+
+        let result;
+        try {
+            result = await fetchWithRetry(`${cleanBaseUrl}/chat/completions`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+        } catch (err) {
+            if (err instanceof TypeError && isLocalhostUrl(cleanBaseUrl)) {
+                throw new Error(`Cannot reach ${cleanBaseUrl}. Is 9router running? Check the dashboard at http://localhost:20128/dashboard`);
+            }
+            throw err;
+        }
 
         const content = result?.choices?.[0]?.message?.content;
         if (!content) {
-            throw new Error("Received an empty response from OpenRouter.");
+            throw new Error("Received an empty response from the AI model.");
         }
         return parseJsonResponse(content);
     }
 
     async function generateStructuredPrompt({ systemPrompt, userPrompt, fieldNames, schemaName, themePrefix }) {
-        const { provider, apiKey, model } = getActiveSettings();
+        const { provider, apiKey, model, baseUrl } = getActiveSettings();
+
+        if (provider === "custom") {
+            if (!model) {
+                showStatus("Please enter a model name in API settings or config.js.", "error", themePrefix);
+                return null;
+            }
+            return await callOpenAICompat({ baseUrl, apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
+        }
+
         if (!apiKey) {
             showStatus("Add your API key in API settings or config.js", "error", themePrefix);
             return null;
@@ -379,7 +440,7 @@
                 showStatus("Please enter an OpenRouter model name in API settings or config.js.", "error", themePrefix);
                 return null;
             }
-            return await callOpenRouter({ apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
+            return await callOpenAICompat({ baseUrl: "https://openrouter.ai/api/v1", apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
         }
 
         const geminiModel = model || DEFAULT_CONFIG.geminiModel;

@@ -1,6 +1,6 @@
 # Prompt Architect
 
-A static, zero-build web app that turns a rough prompt idea into a structured Master Prompt using either Gemini or OpenRouter. It works directly from your disk (`file://`) with no Node.js, npm, or local server required:
+A static, zero-build web app that turns a rough prompt idea into a structured Master Prompt using Gemini, OpenRouter, or any OpenAI-compatible gateway (such as 9router). It works directly from your disk (`file://`) with no Node.js, npm, or local server required:
 
 - **`claude_master_prompt_architect.html`** — 6-part Claude prompt anatomy (`Role`, `Task`, `Context`, `Reasoning`, `Stop Conditions`, `Output`), compiled as Clean Text or XML Tags.
 - **`gemini_master_prompt_architect.html`** — 3-zone / 6-part Gemini prompt anatomy (`Role`, `Constraints`, `Output Format`, `Context`, `Task`, `Final Instruction`), compiled as XML Tags or Markdown.
@@ -28,10 +28,18 @@ A static, zero-build web app that turns a rough prompt idea into a structured Ma
 
 You can skip `config.js` and enter your key directly in the collapsible **API settings** panel at the top of either page:
 
-- Choose **Gemini** or **OpenRouter**, paste your API key, and set the model name.
+- Choose **Gemini**, **OpenRouter**, or **OpenAI-compatible (custom)**, paste your API key (optional for local gateways), and set the model name.
 - Check **Remember on this browser** to save settings in `localStorage` (when unchecked, the key stays in memory only for the current tab).
 - Click **Forget key** to clear any saved key from `localStorage`.
 - Priority order: **UI input > `localStorage` > `config.js`**.
+
+## Using 9router (local)
+
+1. Start 9router on your PC.
+2. Open its dashboard (`http://localhost:20128/dashboard`) and copy the API key (if configured) and a model name.
+3. In **API settings**, choose **OpenAI-compatible (custom)**, keep the default Base URL (`http://localhost:20128/v1`), and enter your key and model name.
+
+Note: This works when the HTML file is opened from your own PC. A hosted page (such as GitHub Pages) may trigger the browser's local-network permission prompt, and other devices (such as a phone) cannot reach `localhost`.
 
 ## Security
 

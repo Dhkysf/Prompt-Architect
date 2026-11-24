@@ -140,6 +140,7 @@
                         <select id="pa-provider" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text focus:outline-none focus:border-gemini-blue">
                             <option value="gemini">Gemini</option>
                             <option value="openrouter">OpenRouter</option>
+                            <option value="custom">OpenAI-compatible (custom)</option>
                         </select>
                     </div>
                     <div>
@@ -150,6 +151,10 @@
                         <label for="pa-model" class="block text-xs text-gemini-muted mb-1">Model</label>
                         <input id="pa-model" type="text" placeholder="gemini-3-flash-preview" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue">
                     </div>
+                </div>
+                <div id="pa-base-url-wrap" class="hidden">
+                    <label for="pa-base-url" class="block text-xs text-gemini-muted mb-1">Base URL</label>
+                    <input id="pa-base-url" type="url" placeholder="http://localhost:20128/v1" class="w-full bg-gemini-bg border border-gemini-border rounded-lg px-3 py-2 text-sm text-gemini-text placeholder-gemini-muted/60 focus:outline-none focus:border-gemini-blue">
                 </div>
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <label class="inline-flex items-center gap-2 text-xs text-gemini-muted cursor-pointer select-none">
