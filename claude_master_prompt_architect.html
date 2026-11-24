@@ -113,6 +113,45 @@
     <!-- Main Content Grid -->
     <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         
+        <!-- API Settings Panel -->
+        <details id="apiSettingsPanel" class="mb-6 bg-claude-surface border border-claude-border rounded-2xl shadow-lg overflow-hidden">
+            <summary class="px-5 py-3.5 cursor-pointer select-none flex items-center justify-between text-sm font-medium text-claude-text hover:bg-claude-surfaceHover transition">
+                <span class="flex items-center gap-2">
+                    <i data-lucide="key-round" class="w-4 h-4 text-claude-accent"></i>
+                    <span>API settings</span>
+                </span>
+                <span id="pa-settings-hint" class="text-xs text-claude-muted font-normal">Gemini</span>
+            </summary>
+            <div class="px-5 pb-5 pt-2 border-t border-claude-border space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label for="pa-provider" class="block text-xs text-claude-muted mb-1">Provider</label>
+                        <select id="pa-provider" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text focus:outline-none focus:border-claude-accent">
+                            <option value="gemini">Gemini</option>
+                            <option value="openrouter">OpenRouter</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="pa-api-key" class="block text-xs text-claude-muted mb-1">API key</label>
+                        <input id="pa-api-key" type="password" autocomplete="off" placeholder="Paste API key (or set in config.js)" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent">
+                    </div>
+                    <div>
+                        <label for="pa-model" class="block text-xs text-claude-muted mb-1">Model</label>
+                        <input id="pa-model" type="text" placeholder="gemini-3-flash-preview" class="w-full bg-claude-bg border border-claude-border rounded-lg px-3 py-2 text-sm text-claude-text placeholder-claude-muted/60 focus:outline-none focus:border-claude-accent">
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <label class="inline-flex items-center gap-2 text-xs text-claude-muted cursor-pointer select-none">
+                        <input id="pa-remember" type="checkbox" class="rounded border-claude-border bg-claude-bg text-claude-accent focus:ring-claude-accent">
+                        <span>Remember on this browser</span>
+                    </label>
+                    <button type="button" id="pa-forget-btn" class="text-xs px-3 py-1.5 rounded-lg bg-claude-bg hover:bg-claude-surfaceHover border border-claude-border text-claude-muted hover:text-claude-text transition cursor-pointer">
+                        Forget key
+                    </button>
+                </div>
+            </div>
+        </details>
+
         <!-- Intro & Input Section -->
         <section class="mb-8 sm:mb-10">
             <div class="bg-claude-surface border border-claude-border rounded-2xl p-5 sm:p-6 shadow-xl">

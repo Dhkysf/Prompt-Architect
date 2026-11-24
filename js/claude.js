@@ -33,6 +33,7 @@ const blueprintExample = {
 
 // Load the example into the UI on initial visit so user sees the structure immediately
 window.addEventListener('DOMContentLoaded', () => {
+    window.PA.initApiSettings('claude');
     loadExampleData(false);
 });
 

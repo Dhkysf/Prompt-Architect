@@ -1,4 +1,5 @@
 (function () {
+    const STORAGE_KEY = "pa_api_settings_v1";
     const DEFAULT_CONFIG = {
         provider: "gemini",
         geminiApiKey: "",
@@ -7,8 +8,150 @@
         openrouterModel: ""
     };
 
+    const uiState = {
+        provider: null,
+        geminiApiKey: "",
+        geminiModel: "",
+        openrouterApiKey: "",
+        openrouterModel: ""
+    };
+
     function getConfig() {
         return Object.assign({}, DEFAULT_CONFIG, window.PA_CONFIG || {});
+    }
+
+    function readSavedSettings() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function writeSavedSettings(data) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (_) {
+            // Ignore storage errors in restricted environments
+        }
+    }
+
+    function clearSavedSettings() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch (_) {
+            // Ignore storage errors
+        }
+    }
+
+    function getActiveSettings() {
+        const cfg = getConfig();
+        const saved = readSavedSettings();
+        const provider = uiState.provider || saved.provider || cfg.provider || "gemini";
+        const isOpenRouter = provider === "openrouter";
+        const keyField = isOpenRouter ? "openrouterApiKey" : "geminiApiKey";
+        const modelField = isOpenRouter ? "openrouterModel" : "geminiModel";
+
+        const apiKey = (uiState[keyField] || "").trim()
+            || (saved[keyField] || "").trim()
+            || (cfg[keyField] || "").trim();
+        const model = (uiState[modelField] || "").trim()
+            || (saved[modelField] || "").trim()
+            || (cfg[modelField] || "").trim();
+
+        return { provider, apiKey, model };
+    }
+
+    function initApiSettings(themePrefix = 'claude') {
+        const providerEl = document.getElementById('pa-provider');
+        const keyEl = document.getElementById('pa-api-key');
+        const modelEl = document.getElementById('pa-model');
+        const rememberEl = document.getElementById('pa-remember');
+        const forgetBtn = document.getElementById('pa-forget-btn');
+        const hintEl = document.getElementById('pa-settings-hint');
+        if (!providerEl || !keyEl || !modelEl || !rememberEl || !forgetBtn) return;
+
+        const cfg = getConfig();
+        const saved = readSavedSettings();
+
+        uiState.provider = saved.provider || cfg.provider || "gemini";
+        uiState.geminiApiKey = saved.geminiApiKey || "";
+        uiState.geminiModel = saved.geminiModel || "";
+        uiState.openrouterApiKey = saved.openrouterApiKey || "";
+        uiState.openrouterModel = saved.openrouterModel || "";
+
+        rememberEl.checked = Boolean(saved.geminiApiKey || saved.openrouterApiKey);
+        providerEl.value = uiState.provider;
+
+        function syncInputsFromState() {
+            const p = providerEl.value;
+            const isOR = p === "openrouter";
+            const keyField = isOR ? "openrouterApiKey" : "geminiApiKey";
+            const modelField = isOR ? "openrouterModel" : "geminiModel";
+
+            keyEl.value = uiState[keyField] || "";
+            keyEl.placeholder = (!uiState[keyField] && (cfg[keyField] || "").trim())
+                ? "Using key from config.js"
+                : "Paste API key (or set in config.js)";
+
+            modelEl.value = uiState[modelField] || cfg[modelField] || "";
+            modelEl.placeholder = isOR ? "e.g. google/gemini-2.5-flash" : "gemini-3-flash-preview";
+
+            if (hintEl) {
+                hintEl.textContent = isOR ? "OpenRouter" : "Gemini";
+            }
+        }
+
+        function persistIfRemembered() {
+            if (rememberEl.checked) {
+                writeSavedSettings({
+                    provider: uiState.provider,
+                    geminiApiKey: uiState.geminiApiKey,
+                    geminiModel: uiState.geminiModel,
+                    openrouterApiKey: uiState.openrouterApiKey,
+                    openrouterModel: uiState.openrouterModel
+                });
+            }
+        }
+
+        providerEl.addEventListener('change', () => {
+            uiState.provider = providerEl.value;
+            syncInputsFromState();
+            persistIfRemembered();
+        });
+
+        keyEl.addEventListener('input', () => {
+            const keyField = providerEl.value === "openrouter" ? "openrouterApiKey" : "geminiApiKey";
+            uiState[keyField] = keyEl.value;
+            persistIfRemembered();
+        });
+
+        modelEl.addEventListener('input', () => {
+            const modelField = providerEl.value === "openrouter" ? "openrouterModel" : "geminiModel";
+            uiState[modelField] = modelEl.value;
+            persistIfRemembered();
+        });
+
+        rememberEl.addEventListener('change', () => {
+            if (rememberEl.checked) {
+                persistIfRemembered();
+            } else {
+                clearSavedSettings();
+            }
+        });
+
+        forgetBtn.addEventListener('click', () => {
+            uiState.geminiApiKey = "";
+            uiState.openrouterApiKey = "";
+            keyEl.value = "";
+            rememberEl.checked = false;
+            clearSavedSettings();
+            syncInputsFromState();
+            showStatus("Saved API key removed from this browser.", "info", themePrefix);
+        });
+
+        syncInputsFromState();
     }
 
     function initIcons() {
@@ -118,6 +261,28 @@
         }
     }
 
+    function parseJsonResponse(rawText) {
+        const cleaned = rawText
+            .trim()
+            .replace(/^```(?:json)?\s*/i, '')
+            .replace(/\s*```$/i, '')
+            .trim();
+        try {
+            return JSON.parse(cleaned);
+        } catch (_) {
+            const start = cleaned.indexOf('{');
+            const end = cleaned.lastIndexOf('}');
+            if (start !== -1 && end > start) {
+                try {
+                    return JSON.parse(cleaned.slice(start, end + 1));
+                } catch (_) {
+                    // Fall through to error
+                }
+            }
+            throw new Error("Could not parse structured JSON from the model response. Try a model that supports structured outputs.");
+        }
+    }
+
     async function callGemini({ apiKey, model, systemPrompt, userPrompt, fieldNames }) {
         const properties = {};
         fieldNames.forEach((name) => {
@@ -159,20 +324,72 @@
         return JSON.parse(rawText);
     }
 
-    async function generateStructuredPrompt({ systemPrompt, userPrompt, fieldNames, themePrefix }) {
-        const cfg = getConfig();
-        const apiKey = (cfg.geminiApiKey || "").trim();
+    async function callOpenRouter({ apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName }) {
+        const properties = {};
+        fieldNames.forEach((name) => {
+            properties[name] = { type: "string" };
+        });
+
+        const payload = {
+            model: model,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: schemaName || "prompt_anatomy",
+                    strict: true,
+                    schema: {
+                        type: "object",
+                        properties: properties,
+                        required: fieldNames,
+                        additionalProperties: false
+                    }
+                }
+            }
+        };
+
+        const result = await fetchWithRetry("https://openrouter.ai/api/v1/chat/completions", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const content = result?.choices?.[0]?.message?.content;
+        if (!content) {
+            throw new Error("Received an empty response from OpenRouter.");
+        }
+        return parseJsonResponse(content);
+    }
+
+    async function generateStructuredPrompt({ systemPrompt, userPrompt, fieldNames, schemaName, themePrefix }) {
+        const { provider, apiKey, model } = getActiveSettings();
         if (!apiKey) {
             showStatus("Add your API key in API settings or config.js", "error", themePrefix);
             return null;
         }
-        const model = (cfg.geminiModel || "").trim() || DEFAULT_CONFIG.geminiModel;
-        return await callGemini({ apiKey, model, systemPrompt, userPrompt, fieldNames });
+
+        if (provider === "openrouter") {
+            if (!model) {
+                showStatus("Please enter an OpenRouter model name in API settings or config.js.", "error", themePrefix);
+                return null;
+            }
+            return await callOpenRouter({ apiKey, model, systemPrompt, userPrompt, fieldNames, schemaName });
+        }
+
+        const geminiModel = model || DEFAULT_CONFIG.geminiModel;
+        return await callGemini({ apiKey, model: geminiModel, systemPrompt, userPrompt, fieldNames });
     }
 
     window.PA = {
         DEFAULT_CONFIG,
         getConfig,
+        initApiSettings,
         initIcons,
         showStatus,
         hideStatus,

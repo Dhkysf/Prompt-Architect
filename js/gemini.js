@@ -33,6 +33,7 @@ const blueprintExample = {
 
 // Populate the blueprint example on initial load
 window.addEventListener('DOMContentLoaded', () => {
+    window.PA.initApiSettings('gemini');
     loadExampleData(false);
 });
 
