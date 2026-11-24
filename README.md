@@ -44,8 +44,10 @@ Note: This works when the HTML file is opened from your own PC. A hosted page (s
 ## Security
 
 - `config.js` is listed in `.gitignore` so your local key is not committed.
+- Third-party scripts (Tailwind CSS and Lucide) are vendored and pinned in `vendor/`, so no external server can change code running alongside your API keys, and the pages work offline (except for Google Fonts, which fall back to system fonts).
 - Any key placed in browser-side JavaScript is visible to anyone who can open that page—never deploy a page with your key baked in.
 - If you host this on GitHub Pages, each visitor must enter their own key in the **API settings** panel.
+- **GitHub Pages caveat:** all project sites under `<user>.github.io` share one browser origin, so an API key saved with **Remember on this browser** (`localStorage`, stored in plain text) can be read by any other page published on that same domain. Only tick **Remember on this browser** on your own PC, or click **Forget key** after use.
 - If you ever commit a key by mistake, revoke/rotate it immediately in your provider dashboard (deleting the commit is not enough).
 
 ## Project layout
@@ -58,7 +60,12 @@ Note: This works when the HTML file is opened from your own PC. A hosted page (s
 │  ├─ common.js
 │  ├─ claude.js
 │  └─ gemini.js
+├─ vendor/
+│  ├─ tailwindcss-play-3.4.17.js
+│  ├─ lucide-1.79.0.min.js
+│  └─ README.md
 ├─ config.example.js
+├─ .gitattributes
 ├─ .gitignore
 └─ README.md
 ```

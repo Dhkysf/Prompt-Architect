@@ -28,8 +28,13 @@ Owner: a beginner on Windows who uses the app personally. The repo is **public**
 │  └─ gemini.js    Gemini page: fields, example, compile, system prompt
 ├─ tests/
 │  └─ parse_test.js  Node unit test for shared response parsing & validation
+├─ vendor/
+│  ├─ tailwindcss-play-3.4.17.js
+│  ├─ lucide-1.79.0.min.js
+│  └─ README.md      vendored scripts metadata & upgrade steps
 ├─ config.example.js   committed template (placeholders only)
 ├─ config.js           git-ignored, holds the owner's real key. Never read it, print it or commit it
+├─ .gitattributes
 ├─ .gitignore
 ├─ README.md
 └─ AGENTS.md
@@ -47,7 +52,7 @@ The app must work when the owner double-clicks the HTML file (`file://`):
 - A missing `config.js` must never crash the page (fresh clones and GitHub Pages do not have it). `common.js` falls back to defaults.
 - Shared logic goes in `js/common.js` under `window.PA`. Page-specific logic goes in the page script. If you change shared UI (for example the API settings panel), update **both** pages so they stay in sync.
 - Keep the UI language English. Keep each page's colors and layout.
-- CDN versions are pinned (for example `lucide@1.79.0`). Do not switch back to `@latest`.
+- No third-party scripts from CDNs. Vendored scripts live in `vendor/`, are never edited, and are upgraded only via the steps in `vendor/README.md`.
 
 ## 3. Secrets (public repo)
 
@@ -89,9 +94,10 @@ Run these and report the results in your reply:
    git grep -nE "AIza[0-9A-Za-z_-]{35}|sk-or-v1-[0-9a-f]{20,}"
    git diff --cached | Select-String -Pattern "AIza[0-9A-Za-z_-]{35}|sk-or-v1-[0-9a-f]{20,}"
    ```
-3. `git check-ignore -v config.js` must show the `.gitignore` rule. `git ls-files` must not list `config.js`.
-4. Every local `<script src>` in both HTML files points to an existing file (`config.js` is allowed to be missing).
-5. If you have a browser tool: open both pages via `file://`. Check for no console errors, that the example loads, that editing a field updates the compiled prompt, that the format toggle and Copy work, and that clicking Architect with no key shows the "add your API key" banner instead of sending a request.
+4. `git check-ignore -v config.js` must show the `.gitignore` rule. `git ls-files` must not list `config.js`.
+5. Every local `<script src>` in both HTML files points to an existing file (`config.js` is allowed to be missing).
+6. `git grep -nE "cdn\.tailwindcss\.com|unpkg\.com|jsdelivr\.net" -- "*.html"` must print nothing.
+7. If you have a browser tool: open both pages via `file://`. Check for no console errors, that the example loads, that editing a field updates the compiled prompt, that the format toggle and Copy work, and that clicking Architect with no key shows the "add your API key" banner instead of sending a request.
 
 Do not create throwaway test scripts inside the repo. Use a temp folder or delete them before committing.
 
